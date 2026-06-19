@@ -1,4 +1,8 @@
 # Changelog
+## 2.1.2 - 2026-06-19
+
+### Fixed
+- Removed hardcoded entity_id to resolve domain mismatch warnings in Home Assistant 2027.5.0
 
 ## 2.1.1 - 2026-02-06
 
