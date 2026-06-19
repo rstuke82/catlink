@@ -26,9 +26,8 @@ class CatlinkEntity(CoordinatorEntity):
         self._attr_name = f"{device.name} {display_name}".strip()
         self._attr_device_id = f"{device.type}_{device.mac}"
         self._attr_unique_id = f"{self._attr_device_id}-{name}"
-        mac = device.mac[-4:] if device.mac else device.id
-        object_id = f"{device.type}_{mac}_{name}"
-        self.entity_id = f"{DOMAIN}.{slugify(object_id)}"
+        self._attr_icon = self._option.get("icon")
+        self._attr_device_class = self._option.get("class")
         self._attr_icon = self._option.get("icon")
         self._attr_device_class = self._option.get("class")
         self._attr_native_unit_of_measurement = self._option.get("unit")
