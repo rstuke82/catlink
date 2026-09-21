@@ -48,9 +48,11 @@ class LitterDevice(LogsMixin, Device):
         """Return the litter weight."""
         litter_weight = 0.0
         try:
-            cat_litter_weight = self.detail.get(
-                "catLitterWeight", self.empty_litter_box_weight
-            )
+            cat_litter_weight = self.detail.get("catLitterWeight")
+            if cat_litter_weight is None:
+                # The API sends the key with a null value on some models, so the
+                # dict.get() default never fires - guard explicitly.
+                cat_litter_weight = self.empty_litter_box_weight
             litter_weight = cat_litter_weight - self.empty_litter_box_weight
             self._litter_weight_during_day.append(litter_weight)
             if litter_weight == 0.0:
@@ -105,7 +107,9 @@ class LitterDevice(LogsMixin, Device):
     def deodorant_countdown(self) -> int:
         """Return the deodorant countdown."""
         try:
-            return int(self.detail.get("deodorantCountdown", 0))
+            raw = self.detail.get("deodorantCountdown")
+            # Same here: the key is present but null, so the default is skipped.
+            return int(raw) if raw is not None else 0
         except Exception as exc:
             _LOGGER.error("Get deodorant countdown failed: %s", exc)
             return 0
