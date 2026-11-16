@@ -5,6 +5,7 @@ import base64
 import datetime
 import hashlib
 import time
+from urllib.parse import urlsplit
 
 from aiohttp import ClientConnectorError
 from cryptography.hazmat.backends import default_backend
@@ -122,18 +123,29 @@ class Account:
         try:
             req = await self.http.request(method, url, **kws)
             result = await req.json() or {}
-            _LOGGER.debug("API response %s %s: %s", method, api, result)
+            return_code = result.get("returnCode")
+            _LOGGER.debug(
+                "API response %s %s (return code: %s)",
+                method,
+                urlsplit(url).path,
+                return_code if type(return_code) is int else None,
+            )
             
             # Handle token expiration (1002: Illegal token)
-            if result.get("returnCode") == 1002 and not kwargs.get("_retried"):
-                _LOGGER.info("Token expired (1002), attempting re-login for %s", self.phone)
+            if return_code == 1002 and not kwargs.get("_retried"):
+                _LOGGER.info("Token expired (1002), attempting re-login")
                 if await self.async_login():
                     kwargs["_retried"] = True
                     return await self.request(api, pms, method, **kwargs)
             
             return result
         except (ClientConnectorError, TimeoutError) as exc:  # noqa: UP041
-            _LOGGER.error("Request api failed: %s", [method, url, pms, exc])
+            _LOGGER.error(
+                "Request api failed: %s %s (%s)",
+                method,
+                urlsplit(url).path,
+                type(exc).__name__,
+            )
         return {}
 
     async def async_login(self) -> bool:
@@ -152,7 +164,7 @@ class Account:
         rsp = await self.request("login/password", pms, "POST")
         tok = rsp.get("data", {}).get("token")
         if not tok:
-            _LOGGER.error("Login %s failed: %s", self.phone, [rsp, pms])
+            _LOGGER.error("CatLink login failed")
             return False
         self._config.update(
             {
@@ -201,7 +213,11 @@ class Account:
                 rsp = await self.request(api, {"type": "NONE"})
         dls = rsp.get("data", {}).get(CONF_DEVICES) or []
         if not dls:
-            _LOGGER.warning("Got devices for %s failed: %s", self.phone, rsp)
+            return_code = rsp.get("returnCode")
+            _LOGGER.warning(
+                "CatLink device list returned no devices (return code: %s)",
+                return_code if type(return_code) is int else None,
+            )
         return dls
 
     async def get_cats(self, timezone_id: str | None = None) -> list:
@@ -220,7 +236,11 @@ class Account:
                 rsp = await self.request(api, params)
         cats = rsp.get("data", {}).get("cats") or []
         if not cats:
-            _LOGGER.warning("Got cats for %s failed: %s", self.phone, rsp)
+            return_code = rsp.get("returnCode")
+            _LOGGER.warning(
+                "CatLink cat list returned no cats (return code: %s)",
+                return_code if type(return_code) is int else None,
+            )
         return cats
 
     async def get_cat_summary_simple(
