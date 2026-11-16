@@ -1,4 +1,11 @@
 # Changelog
+## 2.1.3 - 2026-11-16
+
+- Redacted credentials and account details from CatLink logs.
+- Handled missing litter weight and deodorant countdown values.
+- Removed warnings for successful device log requests that return no entries.
+- Updated documentation, issue reporting, and installation links to the rstuke82 CatLink fork.
+
 ## 2.1.2 - 2026-06-19
 
 ### Fixed

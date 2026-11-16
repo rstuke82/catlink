@@ -16,7 +16,7 @@
 
 <div align="right">
   <span style="margin-right: 10px; font-size: 16px; font-style: italic">Spotted the issue?</span>
-  <a href="https://github.com/hasscc/catlink/issues/new?assignees=&labels=bug%2Ctriage&template=bug_report.md&title=%5BBug%5D%3A+" target="_blank" style="text-decoration: none;"><span style="background-color: #f44b42; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 4px;">Report a Bug</span></a>
+  <a href="https://github.com/rstuke82/catlink/issues/new?assignees=&labels=bug%2Ctriage&template=bug_report.md&title=%5BBug%5D%3A+" target="_blank" style="text-decoration: none;"><span style="background-color: #f44b42; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 4px;">Report a Bug</span></a>
 </div>
 
 ---
@@ -60,7 +60,7 @@ The CatLINK custom integration provides seamless support for integrating your Ca
 # Installation:
 
 ### Easy way
-[![HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?category=integration&owner=hasscc&repository=catlink)
+[![HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?category=integration&owner=rstuke82&repository=catlink)
 
 ### Manually
 
@@ -69,7 +69,7 @@ The CatLINK custom integration provides seamless support for integrating your Ca
 
 #### Method 2: Onkey shell via SSH / Terminal & SSH add-on
 ```shell
-wget -O - https://get.hacs.vip | DOMAIN=catlink REPO_PATH=hasscc/catlink ARCHIVE_TAG=main bash -
+wget -O - https://get.hacs.vip | DOMAIN=catlink REPO_PATH=rstuke82/catlink ARCHIVE_TAG=main bash -
 ```
 
 #### Method 3: shell_command service
@@ -77,7 +77,7 @@ wget -O - https://get.hacs.vip | DOMAIN=catlink REPO_PATH=hasscc/catlink ARCHIVE
     ```yaml
     shell_command:
       update_catlink: |-
-        wget -O - https://get.hacs.vip | DOMAIN=catlink REPO_PATH=hasscc/catlink ARCHIVE_TAG=main bash -
+        wget -O - https://get.hacs.vip | DOMAIN=catlink REPO_PATH=rstuke82/catlink ARCHIVE_TAG=main bash -
     ```
 2. Restart HA core
 3. Call this [`service: shell_command.update_catlink`](https://my.home-assistant.io/redirect/developer_call_service/?service=shell_command.update_catlink) in Developer Tools

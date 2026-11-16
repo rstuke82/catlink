@@ -3,7 +3,7 @@ name: Bug report
 about: Create a report to help us improve
 title: "[BUG] "
 labels: bug
-assignees: hasscc
+assignees: ''
 ---
 
 name: Bug Report
@@ -58,4 +58,4 @@ Traceback (most recent call last):
 
 ---
 
-**By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/hasscc/catlink/CODE_OF_CONDUCT.md).**
+**By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/rstuke82/catlink/blob/main/CODE_OF_CONDUCT.md).**
