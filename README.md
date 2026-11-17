@@ -21,6 +21,8 @@
 
 ---
 
+This is a maintenance fork of [hasscc/catlink](https://github.com/hasscc/catlink), originally created by [Alone (@al-one)](https://github.com/al-one). Thanks to Alone, [Milos Ljubenovic](https://github.com/milosljubenovic), and the other upstream contributors. [@rstuke82](https://github.com/rstuke82) maintains this fork with a focus on fixes and Home Assistant compatibility.
+
 ### Table of Contents
 
 - [Features](#features)

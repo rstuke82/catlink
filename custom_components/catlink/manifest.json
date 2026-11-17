@@ -5,7 +5,7 @@
   "documentation": "https://github.com/rstuke82/catlink",
   "issue_tracker": "https://github.com/rstuke82/catlink/issues",
   "requirements": ["phonenumbers>=8.13.0","pydantic>=2.0"],
-  "codeowners": ["@milosljubenovic"],
+  "codeowners": ["@rstuke82"],
   "config_flow": true,
   "iot_class": "cloud_polling"
 }

@@ -15,7 +15,7 @@ If you encounter a bug while using the CatLINK v2 Custom Integration for Home As
 3. **Gather Information**:
 
    - **Describe the Bug**: Provide a clear and concise description of the bug. Include details about what you were trying to do, what you expected to happen, and what actually happened.
-   - **Home Assistant Logs**: Check the Home Assistant logs for any error messages related to the integration. Copy the relevant log entries, as these are crucial for diagnosing the issue.
+   - **Home Assistant Logs**: Check the Home Assistant logs for any error messages related to the integration. Share only the relevant entries. Remove tokens, passwords, phone numbers, and any full request URLs that contain credentials before posting.
    - **System Details**: Note down details like your Home Assistant version, CatLINK integration version, and how you installed the integration (e.g., via HACS, manual installation).
 
 4. **Submit a Bug Report**:

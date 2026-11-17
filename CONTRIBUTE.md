@@ -6,7 +6,7 @@ Contributing to the CatLINK v2 Custom Integration for Home Assistant is a great 
 
 Start by forking the repository on GitHub. This will create a copy of the project under your own GitHub account. You can make changes in this fork without affecting the original project.
 
-- Go to the GitHub page for the CatLINK v2 Custom Integration.
+- Go to the [CatLink maintenance fork](https://github.com/rstuke82/catlink).
 - Click the "Fork" button in the top-right corner of the page.
 
 ### 2. Clone the Repository
@@ -52,9 +52,9 @@ git push origin your-branch-name
 
 ### 7. Create a Pull Request
 
-Finally, navigate to the original repository on GitHub and create a pull request (PR). This will submit your changes for review and potential inclusion in the main project.
+Open a pull request against the [maintenance fork’s main branch](https://github.com/rstuke82/catlink/pulls). This will submit your changes for review and potential inclusion in the main project.
 
-- Go to the "Pull Requests" section of the original repository.
+- Go to the "Pull Requests" section of the maintenance fork.
 - Click "New Pull Request" and select your branch.
 - Provide a detailed description of your changes and any relevant information.
 
@@ -70,7 +70,7 @@ Once your pull request is merged, congratulations! You've successfully contribut
 
 ### Code of Conduct
 
-Please ensure that you follow our [Code of Conduct](#) when contributing to the project. We are committed to maintaining a welcoming and inclusive environment for all contributors.
+Please ensure that you follow our [Code of Conduct](CODE_OF_CONDUCT.md) when contributing to the project. We are committed to maintaining a welcoming and inclusive environment for all contributors.
 
 ---
 

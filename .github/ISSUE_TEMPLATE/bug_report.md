@@ -42,7 +42,7 @@ assignees: []
 
 ### Relevant Log Output
 
-**Please copy and paste any relevant log output from Home Assistant.**
+Share only the relevant Home Assistant log entries. Remove tokens, passwords, phone numbers, and any full request URLs that contain credentials before posting.
 
 ```shell
 2024-08-23 14:52:01 ERROR (MainThread) [homeassistant.components.catlink] Error doing job: Task exception was never retrieved
