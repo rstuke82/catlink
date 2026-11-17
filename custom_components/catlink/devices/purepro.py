@@ -101,7 +101,6 @@ class PureProDevice(LogsMixin, Device):
             return "No activity recorded"
         # The event field usually contains "Cat drank water, X seconds"
         res = f"{log.get('time')} {log.get('event')}".strip()
-        _LOGGER.debug("PurePro %s last_log: %s", self.name, res)
         return res
 
     @property
@@ -183,12 +182,12 @@ class PureProDevice(LogsMixin, Device):
             
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
         else:
-            _LOGGER.debug("Got device detail for %s: %s", self.name, rdt)
+            _LOGGER.warning("CatLink device detail unavailable")
             
         self.detail = rdt
         self._action_error = None
@@ -203,7 +202,7 @@ class PureProDevice(LogsMixin, Device):
                 mod = k
                 break
         if mod is None:
-            _LOGGER.warning("Select mode failed for %s in %s", mode, self.modes)
+            _LOGGER.warning("Select mode failed")
             return False
         
         pms = {
@@ -219,7 +218,7 @@ class PureProDevice(LogsMixin, Device):
             return False
             
         await self.update_device_detail()
-        _LOGGER.info("Select mode: %s", [rdt, pms])
+        _LOGGER.debug("Select mode completed")
         return True
 
     async def update_logs(self) -> list:

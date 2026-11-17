@@ -26,7 +26,7 @@ class DevicesCoordinator(DataUpdateCoordinator):
         super().__init__(
             account.hass,
             _LOGGER,
-            name=f"{DOMAIN}-{account.uid}-{CONF_DEVICES}",
+            name=f"{DOMAIN}-{config_entry_id}-{CONF_DEVICES}",
             update_interval=account.update_interval,
         )
         self.account = account
@@ -46,11 +46,7 @@ class DevicesCoordinator(DataUpdateCoordinator):
             if not did:
                 continue
             if self._device_ids is not None and did not in self._device_ids:
-                _LOGGER.debug(
-                    "Device %s (%s) skipped because it is not in configured device list",
-                    dat.get("deviceName"),
-                    did,
-                )
+                _LOGGER.debug("Skipping a device outside the configured device list")
                 continue
             additional_config = next(
                 (cfg for cfg in self.additional_config if cfg.mac == dat.get("mac")),
@@ -120,7 +116,7 @@ class DevicesCoordinator(DataUpdateCoordinator):
         add = add_entities.get(self.config_entry_id, {}).get(domain)
         if not add or not hasattr(dvc, hdk):
             return
-        added_entity_ids: list[str] = []
+        added_count = 0
         entity_cls = DOMAIN_ENTITY_CLASSES.get(domain)
         for k, cfg in getattr(dvc, hdk).items():
             key = f"{domain}.{k}.{dvc.id}"
@@ -132,10 +128,6 @@ class DevicesCoordinator(DataUpdateCoordinator):
             if new:
                 self._subs[key] = new
                 add([new])
-                added_entity_ids.append(new.entity_id)
-        if added_entity_ids:
-            _LOGGER.info(
-                "Device %s entities: %s",
-                dvc.name,
-                added_entity_ids,
-            )
+                added_count += 1
+        if added_count:
+            _LOGGER.info("Added %d CatLink entities", added_count)

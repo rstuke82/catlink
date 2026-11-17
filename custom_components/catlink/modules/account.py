@@ -4,18 +4,21 @@ from asyncio import TimeoutError
 import base64
 import datetime
 import hashlib
+from json import JSONDecodeError
 import time
 from urllib.parse import urlsplit
 
-from aiohttp import ClientConnectorError
+from aiohttp import ClientConnectorError, ClientError, ClientResponseError
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 from homeassistant.const import CONF_DEVICES, CONF_PASSWORD, CONF_TOKEN
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from ..const import (
     _LOGGER,
@@ -39,7 +42,7 @@ class Account:
 
     def __init__(self, hass: HomeAssistant, config: dict) -> None:
         """Initialize the account."""
-        self._config = config
+        self._config = dict(config)
         self.hass = hass
         self.http = aiohttp_client.async_create_clientsession(hass, auto_cleanup=False)
 
@@ -87,13 +90,28 @@ class Account:
 
     def api_url(self, api="") -> str:
         """Return the full url of the api."""
-        if api[:6] == "https:" or api[:5] == "http:":
-            return api
-        bas = self.get_config(CONF_API_BASE) or DEFAULT_API_BASE
-        return f"{bas.rstrip('/')}/{api.lstrip('/')}"
+        try:
+            path = urlsplit(api)
+            base = self.get_config(CONF_API_BASE) or DEFAULT_API_BASE
+            origin = urlsplit(base)
+        except ValueError:
+            raise HomeAssistantError("Invalid CatLink API URL") from None
+        if path.scheme or path.netloc or api.startswith("//") or "\\" in api:
+            raise HomeAssistantError("CatLink requires a relative API path")
+        if (
+            origin.scheme != "https"
+            or not origin.hostname
+            or origin.username is not None
+            or origin.query
+            or origin.fragment
+        ):
+            raise HomeAssistantError("CatLink requires an HTTPS API base URL")
+        return f"{base.rstrip('/')}/{api.lstrip('/')}"
 
-    async def request(self, api, pms=None, method="GET", **kwargs) -> dict:
-        """Request the api."""
+    async def request(
+        self, api, pms=None, method="GET", *, _retried=False, **kwargs
+    ) -> dict:
+        """Request the API without modifying caller-provided parameters."""
         method = method.upper()
         url = self.api_url(api)
         kws = {
@@ -107,46 +125,56 @@ class Account:
             },
         }
         kws.update(kwargs)
-        if pms is None:
-            pms = {}
-        pms["noncestr"] = int(time.time() * 1000)
+        kws["allow_redirects"] = False
+        params = dict(pms or {})
+        params["noncestr"] = int(time.time() * 1000)
         if self.token:
-            pms[CONF_TOKEN] = self.token
-        pms["sign"] = self.params_sign(pms)
-        if method in ["GET"]:
-            kws["params"] = pms
-        elif method in ["POST_GET"]:
-            method = "POST"
-            kws["params"] = pms
+            params[CONF_TOKEN] = self.token
+        params["sign"] = self.params_sign(params)
+        if method in ("GET", "POST_GET"):
+            kws["params"] = params
         else:
-            kws["data"] = pms
+            kws["data"] = params
+        endpoint = urlsplit(url).path
+        wire_method = "POST" if method == "POST_GET" else method
         try:
-            req = await self.http.request(method, url, **kws)
-            result = await req.json() or {}
-            return_code = result.get("returnCode")
-            _LOGGER.debug(
-                "API response %s %s (return code: %s)",
-                method,
-                urlsplit(url).path,
-                return_code if type(return_code) is int else None,
-            )
-            
-            # Handle token expiration (1002: Illegal token)
-            if return_code == 1002 and not kwargs.get("_retried"):
-                _LOGGER.info("Token expired (1002), attempting re-login")
-                if await self.async_login():
-                    kwargs["_retried"] = True
-                    return await self.request(api, pms, method, **kwargs)
-            
-            return result
+            req = await self.http.request(wire_method, url, **kws)
+            if 300 <= req.status < 400 or 500 <= req.status < 600:
+                req.release()
+                raise UpdateFailed(f"{wire_method} {endpoint}: HTTP {req.status}")
+            result = await req.json()
         except (ClientConnectorError, TimeoutError) as exc:  # noqa: UP041
             _LOGGER.error(
-                "Request api failed: %s %s (%s)",
-                method,
-                urlsplit(url).path,
-                type(exc).__name__,
+                "Request api failed: %s %s (%s)", wire_method, endpoint, type(exc).__name__
             )
-        return {}
+            return {}
+        except ClientResponseError as exc:
+            # aiohttp's exception text includes the full URL and query parameters.
+            raise UpdateFailed(
+                f"{wire_method} {endpoint}: HTTP {exc.status} ({type(exc).__name__})"
+            ) from None
+        except (ClientError, JSONDecodeError, UnicodeDecodeError) as exc:
+            raise UpdateFailed(f"{wire_method} {endpoint}: {type(exc).__name__}") from None
+
+        if result is None:
+            result = {}
+        if not isinstance(result, dict):
+            raise UpdateFailed(f"{wire_method} {endpoint}: expected a JSON object")
+        return_code = result.get("returnCode")
+        _LOGGER.debug(
+            "API response %s %s (return code: %s)",
+            wire_method,
+            endpoint,
+            return_code if type(return_code) is int else None,
+        )
+
+        # Handle token expiration (1002: Illegal token)
+        if return_code == 1002 and not _retried and api != "login/password":
+            _LOGGER.info("Token expired (1002), attempting re-login")
+            if await self.async_login():
+                return await self.request(api, pms, method, _retried=True, **kwargs)
+
+        return result
 
     async def async_login(self) -> bool:
         """Login the account."""
@@ -171,34 +199,18 @@ class Account:
                 CONF_TOKEN: tok,
             }
         )
-        await self.async_check_auth(True)
         return True
 
-    async def async_check_auth(self, save=False) -> dict:
-        """Check the auth of the account."""
-        fnm = f"{DOMAIN}/auth-{self.uid}.json"
-        sto = Store(self.hass, 1, fnm)
-        old = await sto.async_load() or {}
-        if save:
-            cfg = {
-                CONF_PHONE: self.phone,
-                CONF_TOKEN: self.token,
-            }
-            if cfg.get(CONF_TOKEN) == old.get(CONF_TOKEN):
-                cfg["update_at"] = old.get("update_at")
-            else:
-                cfg["update_at"] = f"{datetime.datetime.today()}"
-            await sto.async_save(cfg)
-            return cfg
-        if old.get(CONF_TOKEN):
-            self._config.update(
-                {
-                    CONF_TOKEN: old.get(CONF_TOKEN),
-                }
-            )
-        else:
+    async def async_check_auth(self) -> None:
+        """Load and remove the legacy disk cache, or log in if needed."""
+        store = Store(self.hass, 1, f"{DOMAIN}/auth-{self.uid}.json")
+        legacy = await store.async_load()
+        if legacy is not None:
+            if not self.token and legacy.get(CONF_TOKEN):
+                self._config[CONF_TOKEN] = legacy[CONF_TOKEN]
+            await store.async_remove()
+        if not self.token:
             await self.async_login()
-        return old
 
     async def get_devices(self) -> list:
         """Get the devices of the account."""

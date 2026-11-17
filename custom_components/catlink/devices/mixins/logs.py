@@ -68,14 +68,14 @@ class LogsMixin:
                 rdt = data.get(response_key) or []
         except (TypeError, ValueError) as exc:
             rdt = []
-            _LOGGER.error("Got device logs for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device logs failed: %s", type(exc).__name__)
         if not rdt:
             if rsp and not rsp.get("returnCode"):
                 # A successful response with an empty list just means no recent
                 # activity, so it is not a failure worth a warning on every poll.
-                _LOGGER.debug("No device logs for %s: %s", self.name, rsp)
+                _LOGGER.debug("CatLink returned no device logs")
             else:
-                _LOGGER.warning("Got device logs for %s failed: %s", self.name, rsp)
+                _LOGGER.warning("CatLink device logs unavailable")
         self.logs = rdt
         self._handle_listeners()
         return rdt

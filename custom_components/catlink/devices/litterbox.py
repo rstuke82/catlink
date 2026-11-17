@@ -69,7 +69,7 @@ class LitterBox(LitterDevice):
         try:
             return self.detail.get("currentError") or "Normal Operation"
         except Exception as exc:
-            _LOGGER.error("Got error failed: %s", exc)
+            _LOGGER.error("Got error failed: %s", type(exc).__name__)
             return "Unknown"
 
     @property
@@ -79,14 +79,10 @@ class LitterBox(LitterDevice):
             raw = self.detail.get("litterCountdown", 0)
             result = int(raw)
             if result == 0:
-                _LOGGER.debug(
-                    "litter_remaining_days is 0: litterCountdown=%r (detail keys: %s)",
-                    raw,
-                    list(self.detail.keys()) if self.detail else "none",
-                )
+                _LOGGER.debug("litter_remaining_days is 0")
             return result
         except Exception as exc:
-            _LOGGER.error("Got litter remaining days failed: %s", exc)
+            _LOGGER.error("Got litter remaining days failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -103,7 +99,7 @@ class LitterBox(LitterDevice):
             )
             return "Empty Mode" if knob_flab else "Cleaning Mode"
         except Exception as exc:
-            _LOGGER.error("Got knob status failed: %s", exc)
+            _LOGGER.error("Got knob status failed: %s", type(exc).__name__)
             return "Unknown"
 
     @property
@@ -131,7 +127,7 @@ class LitterBox(LitterDevice):
             )
             return "Full" if full_flag else "Normal"
         except Exception as exc:
-            _LOGGER.error("Got garbage to be status failed: %s", exc)
+            _LOGGER.error("Got garbage to be status failed: %s", type(exc).__name__)
             return "Unknown"
 
     @property
@@ -258,7 +254,7 @@ class LitterBox(LitterDevice):
                 "errors": self.detail.get("deviceErrorList"),
             }
         except Exception as exc:
-            _LOGGER.error("Got error attributes failed: %s", exc)
+            _LOGGER.error("Got error attributes failed: %s", type(exc).__name__)
             return {}
 
     @property
@@ -267,9 +263,7 @@ class LitterBox(LitterDevice):
         sensitivity = self.detail.get("boxFullSensitivity", "")
         mapped_value = self.box_full_levels.get(sensitivity)
         if mapped_value:
-            _LOGGER.debug(
-                "Box full sensitivity mapped: %s -> %s", sensitivity, mapped_value
-            )
+            _LOGGER.debug("Box full sensitivity mapped")
             return mapped_value
         if sensitivity and isinstance(sensitivity, (str, int)):
             try:
@@ -282,21 +276,11 @@ class LitterBox(LitterDevice):
                 if level_key:
                     mapped_value = self.box_full_levels.get(level_key)
                     if mapped_value:
-                        _LOGGER.debug(
-                            "Box full sensitivity mapped (converted): %s -> %s -> %s",
-                            sensitivity,
-                            level_key,
-                            mapped_value,
-                        )
+                        _LOGGER.debug("Box full sensitivity mapped (converted)")
                         return mapped_value
             except (ValueError, AttributeError):
                 pass
-        _LOGGER.warning(
-            "Box full sensitivity raw value %r (type: %s) could not be mapped to known levels; valid values: %s",
-            sensitivity,
-            type(sensitivity).__name__,
-            ", ".join(self.box_full_levels.keys()),
-        )
+        _LOGGER.warning("Could not map box full sensitivity to a known level")
         return None
 
     def box_full_sensitivity_attrs(self) -> dict:
@@ -320,7 +304,7 @@ class LitterBox(LitterDevice):
                 mod = k
                 break
         if mod is None:
-            _LOGGER.warning("Select mode failed for %s in %s", mode, self.modes)
+            _LOGGER.warning("Select mode failed")
             return False
         pms = {
             "workModel": mod,
@@ -334,7 +318,7 @@ class LitterBox(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Select mode: %s", [rdt, pms])
+        _LOGGER.debug("Select mode completed")
         return rdt
 
     async def select_box_full_sensitivity(self, level, **kwargs) -> bool:
@@ -346,11 +330,7 @@ class LitterBox(LitterDevice):
                 lvl = k
                 break
         if lvl is None:
-            _LOGGER.warning(
-                "Select box full sensitivity failed for %s in %s",
-                level,
-                self.box_full_levels,
-            )
+            _LOGGER.warning("Select box full sensitivity failed")
             return False
         pms = {
             "deviceId": self.id,
@@ -364,7 +344,7 @@ class LitterBox(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Select box full sensitivity: %s", [rdt, pms])
+        _LOGGER.debug("Select box full sensitivity completed")
         return rdt
 
     async def update_device_detail(self) -> dict:
@@ -386,15 +366,12 @@ class LitterBox(LitterDevice):
             )
             if not rdt and raw:
                 rdt = raw
-                _LOGGER.debug(
-                    "Using raw deviceInfo for %s because model parsing failed",
-                    self.name,
-                )
+                _LOGGER.debug("Using raw device data because model parsing failed")
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
         self.detail = rdt
         self._action_error = None
         self._handle_listeners()
@@ -411,7 +388,7 @@ class LitterBox(LitterDevice):
                 val = k
                 break
         if val is None:
-            _LOGGER.warning("Select action failed for %s in %s", action, self.actions)
+            _LOGGER.warning("Select action failed")
             return False
         pms = {
             "cmd": val,
@@ -425,7 +402,7 @@ class LitterBox(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Select action: %s", [rdt, pms])
+        _LOGGER.debug("Select action completed")
         return rdt
 
     async def changeBag(self, mode, **kwargs) -> bool:
@@ -443,7 +420,7 @@ class LitterBox(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Change bag: %s", [rdt, pms])
+        _LOGGER.debug("Change bag completed")
         return rdt
 
     async def reset_consumable(self, consumables_type: str) -> bool:
@@ -462,7 +439,7 @@ class LitterBox(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Reset consumable %s: %s", consumables_type, [rdt, pms])
+        _LOGGER.debug("Reset consumable completed")
         return rdt
 
     async def async_reset_litter(self) -> bool:

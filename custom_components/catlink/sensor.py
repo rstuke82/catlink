@@ -23,7 +23,7 @@ async def _register_sensor_services() -> None:
             vol.Required("api"): cv.string,
             vol.Optional("params", default={}): vol.Any(dict, None),
             vol.Optional("method", default="GET"): cv.string,
-            vol.Optional("throw", default=True): cv.boolean,
+            vol.Optional("throw", default=False): cv.boolean,
         },
         "async_request_api",
     )

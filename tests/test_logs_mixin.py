@@ -192,4 +192,5 @@ class TestLogsMixinFetchLogs:
         )
 
         assert result == []
-        assert "Got device logs for Living Room Litter failed" in caplog.text
+        assert "CatLink device logs unavailable" in caplog.text
+        assert "Living Room Litter" not in caplog.text

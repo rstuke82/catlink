@@ -225,6 +225,8 @@ It will automatically discover your Region, Cats & Devices.
 
 #### Request API
 
+Use a relative API path on the configured CatLink server. Set `throw: true` to show a notification with the numeric API return code.
+
 ```yaml
 service: catlink.request_api
 target:
@@ -234,6 +236,8 @@ data:
   params:
     key: val
 ```
+
+Home Assistant retains your CatLink login credentials in its integration configuration so it can reconnect after a restart. Treat configuration exports and backups as sensitive. CatLink keeps new session tokens in memory and removes the legacy token cache when it loads the account.
 
 ## Changelog
 

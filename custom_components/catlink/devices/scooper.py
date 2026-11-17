@@ -76,7 +76,7 @@ class ScooperDevice(LitterDevice):
                 )
             return error
         except Exception as exc:
-            _LOGGER.error("Get device error failed: %s", exc)
+            _LOGGER.error("Get device error failed: %s", type(exc).__name__)
             return "unknown"
 
     @property
@@ -159,20 +159,12 @@ class ScooperDevice(LitterDevice):
             )
             if not rdt and raw:
                 rdt = raw
-                _LOGGER.debug(
-                    "Using raw deviceInfo for %s because model parsing failed",
-                    self.name,
-                )
+                _LOGGER.debug("Using raw device data because model parsing failed")
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            data_keys = list(rsp.get("data", {}).keys()) if rsp else []
-            _LOGGER.warning(
-                "Got device detail for %s failed (empty parse); response data keys: %s",
-                self.name,
-                data_keys,
-            )
+            _LOGGER.warning("CatLink device detail unavailable")
         self.detail = rdt
         self._action_error = None
         self._handle_listeners()

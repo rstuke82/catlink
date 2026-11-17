@@ -40,7 +40,6 @@ class Device:
         """Update device data."""
         self.data = dat
         self._handle_listeners()
-        _LOGGER.info("Update device data: %s", dat)
 
     def _handle_listeners(self) -> None:
         """Notify all registered listeners to refresh their state."""
@@ -116,7 +115,7 @@ class Device:
             }
             return dic.get(f"{sta}".strip(), sta)
         except Exception as exc:
-            _LOGGER.error("Get device state failed: %s", exc)
+            _LOGGER.error("Get device state failed: %s", type(exc).__name__)
             return "unknown"
 
     @property
@@ -211,7 +210,7 @@ class Device:
                 mod = k
                 break
         if mod is None:
-            _LOGGER.warning("Select mode failed for %s in %s", mode, self.modes)
+            _LOGGER.warning("Select mode failed")
             return False
         pms = {
             "workModel": mod,
@@ -225,7 +224,7 @@ class Device:
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Select mode: %s", [rdt, pms])
+        _LOGGER.debug("Select mode completed")
         return rdt
 
     async def select_action(self, action, **kwargs) -> bool:
@@ -237,7 +236,7 @@ class Device:
                 val = k
                 break
         if val is None:
-            _LOGGER.warning("Select action failed for %s in %s", action, self.actions)
+            _LOGGER.warning("Select action failed")
             return False
         pms = {
             "cmd": val,
@@ -251,7 +250,7 @@ class Device:
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Select action: %s", [rdt, pms])
+        _LOGGER.debug("Select action completed")
         return rdt
 
     async def update_device_detail(self) -> dict:
@@ -273,15 +272,12 @@ class Device:
             )
             if not rdt and raw:
                 rdt = raw
-                _LOGGER.debug(
-                    "Using raw deviceInfo for %s because model parsing failed",
-                    self.name,
-                )
+                _LOGGER.debug("Using raw device data because model parsing failed")
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
         self.detail = rdt
         self._action_error = None
         self._handle_listeners()

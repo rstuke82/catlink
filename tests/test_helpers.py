@@ -55,18 +55,18 @@ class TestFormatApiError:
         }
         assert (
             format_api_error(rdt)
-            == "Protection is temporarily paused. (returnCode: 4007)"
+            == "CatLink API request failed (return code: 4007)"
         )
 
     def test_with_msg_only(self) -> None:
         """Test formatting with msg only."""
         rdt = {"msg": "Device offline"}
-        assert format_api_error(rdt) == "Device offline"
+        assert format_api_error(rdt) == "CatLink API request failed"
 
     def test_with_message_alias(self) -> None:
         """Test formatting with message key."""
         rdt = {"message": "Custom error", "returnCode": 500}
-        assert format_api_error(rdt) == "Custom error (returnCode: 500)"
+        assert format_api_error(rdt) == "CatLink API request failed (return code: 500)"
 
     def test_without_msg(self) -> None:
         """Test formatting when msg is missing."""

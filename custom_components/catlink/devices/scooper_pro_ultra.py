@@ -43,7 +43,7 @@ class ScooperProUltraDevice(LitterDevice):
         try:
             return int(self.detail.get("litterCountdown", 0))
         except Exception as exc:
-            _LOGGER.error("Got litter remaining days failed: %s", exc)
+            _LOGGER.error("Got litter remaining days failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -52,7 +52,7 @@ class ScooperProUltraDevice(LitterDevice):
         try:
             return int(self.detail.get("totalCleanTimes", 0))
         except Exception as exc:
-            _LOGGER.error("Get total clean time failed: %s", exc)
+            _LOGGER.error("Get total clean time failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -93,9 +93,9 @@ class ScooperProUltraDevice(LitterDevice):
             )
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
         self.detail = rdt
         self._action_error = None
         self._handle_listeners()
@@ -126,14 +126,14 @@ class ScooperProUltraDevice(LitterDevice):
                 rdt = data.get("records") or []
         except (TypeError, ValueError) as exc:
             rdt = []
-            _LOGGER.error("Got device logs for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device logs failed: %s", type(exc).__name__)
         if not rdt:
             if rsp and not rsp.get("returnCode"):
                 # A successful response with an empty list just means no recent
                 # activity, so it is not a failure worth a warning on every poll.
-                _LOGGER.debug("No device logs for %s: %s", self.name, rsp)
+                _LOGGER.debug("CatLink returned no device logs")
             else:
-                _LOGGER.warning("Got device logs for %s failed: %s", self.name, rsp)
+                _LOGGER.warning("CatLink device logs unavailable")
         self.logs = rdt
         self._handle_listeners()
         return rdt

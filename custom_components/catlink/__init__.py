@@ -1,9 +1,11 @@
 """The component."""
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_DEVICES
+from homeassistant.const import CONF_DEVICES, CONF_PASSWORD, CONF_TOKEN
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import (
     _LOGGER,
@@ -40,7 +42,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     device_ids = entry.options.get(CONF_DEVICE_IDS) if entry.options else None
     coordinator = DevicesCoordinator(acc, entry.entry_id, device_ids=device_ids)
 
-    await acc.async_check_auth()
+    try:
+        await acc.async_check_auth()
+    except UpdateFailed as exc:
+        raise ConfigEntryNotReady(str(exc)) from None
+    if entry.data.get(CONF_PASSWORD) and CONF_TOKEN in entry.data:
+        data = dict(entry.data)
+        data.pop(CONF_TOKEN)
+        hass.config_entries.async_update_entry(entry, data=data)
     await coordinator.async_refresh()
 
     hass.data[DOMAIN][CONF_ACCOUNTS][acc.uid] = acc
@@ -59,11 +68,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     uid = f"{entry.data.get('phone_iac', '86')}-{entry.data.get('phone', '')}"
     if uid in hass.data[DOMAIN][CONF_ACCOUNTS]:
         del hass.data[DOMAIN][CONF_ACCOUNTS][uid]
-    coordinator_name = f"{DOMAIN}-{uid}-{CONF_DEVICES}"
-    if coordinator_name in hass.data[DOMAIN]["coordinators"]:
-        del hass.data[DOMAIN]["coordinators"][coordinator_name]
-    if entry.entry_id in hass.data[DOMAIN]["entry_coordinators"]:
-        del hass.data[DOMAIN]["entry_coordinators"][entry.entry_id]
+    coordinator = hass.data[DOMAIN]["entry_coordinators"].pop(entry.entry_id, None)
+    if coordinator is not None:
+        hass.data[DOMAIN]["coordinators"].pop(coordinator.name, None)
     if entry.entry_id in hass.data[DOMAIN].get("add_entities", {}):
         del hass.data[DOMAIN]["add_entities"][entry.entry_id]
 

@@ -50,9 +50,9 @@ class TestDevicesCoordinatorInit:
         """Test coordinator stores config entry id."""
         assert coordinator.config_entry_id == "test-entry-123"
 
-    def test_init_sets_name(self, coordinator, mock_account) -> None:
-        """Test coordinator name includes domain and uid."""
-        assert coordinator.name == f"{DOMAIN}-{mock_account.uid}-devices"
+    def test_init_sets_name(self, coordinator) -> None:
+        """Test coordinator name includes domain and config entry ID."""
+        assert coordinator.name == f"{DOMAIN}-test-entry-123-devices"
 
     def test_init_parses_additional_config(
         self, mock_account, coordinator_hass_data

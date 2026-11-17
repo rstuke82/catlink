@@ -39,7 +39,7 @@ class FeederDevice(LogsMixin, Device):
     def portions(self, value: int) -> None:
         """Set the number of portions."""
         self._portions = int(value)
-        _LOGGER.debug("Feeder %s portions set to %s", self.name, self._portions)
+        _LOGGER.debug("Feeder portions updated")
 
     @property
     def weight(self) -> int:
@@ -90,16 +90,13 @@ class FeederDevice(LogsMixin, Device):
             )
             if not rdt and raw:
                 rdt = raw
-                _LOGGER.debug(
-                    "Using raw deviceInfo for %s because model parsing failed",
-                    self.name,
-                )
+                _LOGGER.debug("Using raw device data because model parsing failed")
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
-        _LOGGER.debug("Update device detail: %s", rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
+        _LOGGER.debug("Update device detail")
         self.detail = rdt
         self._action_error = None
         self._handle_listeners()
@@ -142,7 +139,7 @@ class FeederDevice(LogsMixin, Device):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("Food out: %s", [rdt, pms])
+        _LOGGER.debug("Food out completed")
         return rdt
 
     @property

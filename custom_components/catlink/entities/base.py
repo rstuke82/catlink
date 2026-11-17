@@ -7,7 +7,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import slugify
 
-from ..const import _LOGGER, DOMAIN
+from ..const import DOMAIN
 from ..devices.base import Device
 
 
@@ -67,9 +67,6 @@ class CatlinkEntity(CoordinatorEntity):
         """Update the entity."""
         if hasattr(self._device, self._name):
             self._attr_state = getattr(self._device, self._name)
-            _LOGGER.debug(
-                "Entity update: %s", [self.entity_id, self._name, self._attr_state]
-            )
         entity_picture = self._option.get("entity_picture")
         if callable(entity_picture):
             self._attr_entity_picture = entity_picture()
@@ -88,10 +85,16 @@ class CatlinkEntity(CoordinatorEntity):
         throw = kwargs.pop("throw", None)
         rdt = await self.account.request(api, params, method, **kwargs)
         if throw:
+            code = rdt.get("returnCode")
+            message = (
+                f"CatLink API return code: {code}"
+                if type(code) is int
+                else "CatLink API returned no status code"
+            )
             persistent_notification.async_create(
                 self.hass,
-                f"{rdt}",
-                f"Request: {api}",
+                message,
+                "CatLink API request",
                 f"{DOMAIN}-request",
             )
         return rdt

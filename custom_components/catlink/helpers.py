@@ -90,16 +90,11 @@ async def discover_region(
 
 
 def format_api_error(rdt: dict) -> str:
-    """Build a user-friendly error message from CatLink API response.
-
-    Extracts the 'msg' field when present; otherwise returns a string
-    representation of the full response for debugging.
-    """
-    msg = rdt.get("msg") or rdt.get("message")
+    """Describe an API failure using only its numeric return code."""
     code = rdt.get("returnCode")
-    if msg:
-        return f"{msg} (returnCode: {code})" if code else str(msg)
-    return str(rdt)
+    if type(code) is int:
+        return f"CatLink API request failed (return code: {code})"
+    return "CatLink API request failed"
 
 
 class Helper:

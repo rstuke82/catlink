@@ -435,7 +435,7 @@ class TestLitterBoxAsyncMethods:
         result = await device.select_mode("auto")
 
         assert result is False
-        assert "Device busy" in device.error
+        assert "return code: 4007" in device.error
 
     @pytest.mark.usefixtures("enable_custom_integrations")
     async def test_select_action_success(
@@ -769,7 +769,7 @@ class TestFeederDeviceAsyncMethods:
         result = await device.food_out()
 
         assert result is False
-        assert "Device busy" in (device._action_error or "")  # noqa: SLF001
+        assert "return code: 500" in (device._action_error or "")  # noqa: SLF001
 
     @pytest.mark.usefixtures("enable_custom_integrations")
     async def test_update_device_detail_success(

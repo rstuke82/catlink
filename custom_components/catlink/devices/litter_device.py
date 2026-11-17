@@ -40,7 +40,7 @@ class LitterDevice(LogsMixin, Device):
             }
             return dic.get(f"{sta}".strip(), sta)
         except Exception as exc:
-            _LOGGER.error("Get device state failed: %s", exc)
+            _LOGGER.error("Get device state failed: %s", type(exc).__name__)
             return "unknown"
 
     @property
@@ -56,14 +56,9 @@ class LitterDevice(LogsMixin, Device):
             litter_weight = cat_litter_weight - self.empty_litter_box_weight
             self._litter_weight_during_day.append(litter_weight)
             if litter_weight == 0.0:
-                _LOGGER.debug(
-                    "litter_weight is 0: catLitterWeight=%r, empty_litter_box_weight=%r (detail keys: %s)",
-                    cat_litter_weight,
-                    self.empty_litter_box_weight,
-                    list(self.detail.keys()) if self.detail else "none",
-                )
+                _LOGGER.debug("litter_weight is 0")
         except Exception as exc:
-            _LOGGER.error("Got litter weight failed: %s", exc)
+            _LOGGER.error("Got litter weight failed: %s", type(exc).__name__)
         return litter_weight
 
     @property
@@ -72,7 +67,7 @@ class LitterDevice(LogsMixin, Device):
         try:
             return self.detail.get("litterCountdown", "unknown")
         except Exception as exc:
-            _LOGGER.error("Get litter remaining days failed: %s", exc)
+            _LOGGER.error("Get litter remaining days failed: %s", type(exc).__name__)
             return "unknown"
 
     @property
@@ -83,7 +78,7 @@ class LitterDevice(LogsMixin, Device):
                 self.detail.get("manualTimes", 0)
             )
         except Exception as exc:
-            _LOGGER.error("Get total clean time failed: %s", exc)
+            _LOGGER.error("Get total clean time failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -93,14 +88,10 @@ class LitterDevice(LogsMixin, Device):
             raw = self.detail.get("manualTimes", 0)
             result = int(raw)
             if result == 0:
-                _LOGGER.debug(
-                    "manual_clean_time is 0: manualTimes=%r (detail keys: %s)",
-                    raw,
-                    list(self.detail.keys()) if self.detail else "none",
-                )
+                _LOGGER.debug("manual_clean_time is 0")
             return result
         except Exception as exc:
-            _LOGGER.error("Get manual clean time failed: %s", exc)
+            _LOGGER.error("Get manual clean time failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -111,7 +102,7 @@ class LitterDevice(LogsMixin, Device):
             # Same here: the key is present but null, so the default is skipped.
             return int(raw) if raw is not None else 0
         except Exception as exc:
-            _LOGGER.error("Get deodorant countdown failed: %s", exc)
+            _LOGGER.error("Get deodorant countdown failed: %s", type(exc).__name__)
             return 0
 
     @property
@@ -132,7 +123,7 @@ class LitterDevice(LogsMixin, Device):
         try:
             return self.detail.get("online")
         except Exception as exc:
-            _LOGGER.error("Get online status failed: %s", exc)
+            _LOGGER.error("Get online status failed: %s", type(exc).__name__)
             return False
 
     async def async_init(self) -> None:

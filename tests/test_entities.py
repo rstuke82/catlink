@@ -1,6 +1,6 @@
 """Tests for CatLink entity classes."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.catlink.devices.base import Device
 from custom_components.catlink.devices.litterbox import LitterBox
@@ -55,6 +55,29 @@ def real_device(mock_coordinator):
 
 class TestCatlinkEntity:
     """Tests for CatlinkEntity base class."""
+
+    @pytest.mark.parametrize("show_notification", [False, True])
+    async def test_request_api_notification_contains_only_status(
+        self, hass, mock_device, mock_coordinator, show_notification
+    ) -> None:
+        mock_device.coordinator = mock_coordinator
+        entity = CatlinkEntity("error", mock_device)
+        entity.hass = hass
+        response = {"returnCode": 0, "data": {"token": "private-value"}}
+        entity.account.request = AsyncMock(return_value=response)
+
+        with patch("custom_components.catlink.entities.base.persistent_notification.async_create") as notify:
+            result = await entity.async_request_api(
+                "/token/device/list", throw=show_notification
+            )
+
+        assert result == response
+        if show_notification:
+            notify.assert_called_once_with(
+                hass, "CatLink API return code: 0", "CatLink API request", "catlink-request"
+            )
+        else:
+            notify.assert_not_called()
 
     def test_entity_initialization(
         self, hass, mock_device, mock_coordinator

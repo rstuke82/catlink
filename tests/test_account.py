@@ -1,11 +1,17 @@
 """Tests for CatLink Account module."""
 
 from datetime import timedelta
+from json import JSONDecodeError
+import traceback
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from aiohttp import ContentTypeError
 import pytest
+from yarl import URL
 
 from homeassistant.const import CONF_DEVICES, CONF_PASSWORD, CONF_TOKEN
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.catlink.const import (
     CONF_API_BASE,
@@ -124,15 +130,12 @@ class TestAccountApiUrl:
         url = account.api_url("token/device/list")
         assert url == f"{DEFAULT_API_BASE.rstrip('/')}/token/device/list"
 
-    def test_api_url_absolute_https(self, account) -> None:
-        """Test api_url returns full URL as-is for https."""
-        url = account.api_url("https://other.api/endpoint")
-        assert url == "https://other.api/endpoint"
-
-    def test_api_url_absolute_http(self, account) -> None:
-        """Test api_url returns full URL as-is for http."""
-        url = account.api_url("http://other.api/endpoint")
-        assert url == "http://other.api/endpoint"
+    @pytest.mark.parametrize("api", ["https://other.api/endpoint", "http://other.api/endpoint", "//other.api/endpoint"])
+    async def test_request_rejects_external_url(self, account, api) -> None:
+        """Prevent credentials from being sent to a caller-provided host."""
+        with pytest.raises(HomeAssistantError, match="relative API path"):
+            await account.request(api)
+        account.http.request.assert_not_called()
 
     def test_api_url_custom_base(self, hass, mock_http_session) -> None:
         """Test api_url uses custom API base from config."""
@@ -226,7 +229,7 @@ class TestAccountRequest:
         async def mock_request(method, url, **kwargs):
             request_kwargs.clear()
             request_kwargs.update(kwargs)
-            resp = MagicMock()
+            resp = MagicMock(status=200)
             resp.json = AsyncMock(return_value={"returnCode": 0, "data": {}})
             return resp
 
@@ -245,16 +248,44 @@ class TestAccountRequest:
 
         async def mock_request(method, url, **kwargs):
             call_params.update(kwargs)
-            resp = MagicMock()
+            resp = MagicMock(status=200)
             resp.json = AsyncMock(return_value={})
             return resp
 
         account.http.request = mock_request
-        await account.request("api", {"key": "val"})
+        params = {"key": "val"}
+        await account.request("api", params)
+        assert params == {"key": "val"}
+        assert call_params["allow_redirects"] is False
 
         params = call_params.get("params") or call_params.get("data") or {}
         assert CONF_TOKEN in params
         assert params[CONF_TOKEN] == "existing-token"
+
+    async def test_post_get_retries_with_new_token_and_original_parameters(
+        self, account
+    ) -> None:
+        account.http.request = AsyncMock(side_effect=[
+            MagicMock(status=200, json=AsyncMock(return_value={"returnCode": 1002})),
+            MagicMock(status=200, json=AsyncMock(return_value={"returnCode": 0})),
+        ])
+
+        async def login():
+            account._config[CONF_TOKEN] = "new-token"
+            return True
+
+        account.async_login = AsyncMock(side_effect=login)
+        params = {"type": "NONE"}
+        assert await account.request("token/device/list", params, "POST_GET") == {
+            "returnCode": 0
+        }
+
+        first, second = account.http.request.await_args_list
+        assert first.args[0] == second.args[0] == "POST"
+        assert first.kwargs["params"][CONF_TOKEN] == "existing-token"
+        assert second.kwargs["params"][CONF_TOKEN] == "new-token"
+        assert "_retried" not in second.kwargs
+        assert params == {"type": "NONE"}
 
 
 class TestAccountAsyncLogin:
@@ -263,19 +294,9 @@ class TestAccountAsyncLogin:
     @pytest.mark.usefixtures("enable_custom_integrations")
     async def test_login_success(self, account) -> None:
         """Test async_login succeeds with valid token in response."""
-        with patch.object(account, "request", new_callable=AsyncMock) as mock_request:
-            with patch.object(
-                account, "async_check_auth", new_callable=AsyncMock
-            ) as mock_check:
-                mock_request.return_value = {
-                    "data": {"token": "new-token"},
-                    "returnCode": 0,
-                }
-                result = await account.async_login()
-
-                assert result is True
-                assert account.token == "new-token"
-                mock_check.assert_called_once_with(True)
+        account.request = AsyncMock(return_value={"data": {"token": "new-token"}})
+        assert await account.async_login()
+        assert account.token == "new-token"
 
     @pytest.mark.usefixtures("enable_custom_integrations")
     async def test_login_fails_no_token(self, account) -> None:
@@ -385,69 +406,31 @@ class TestAccountGetCatSummarySimple:
             mock_request.assert_called_once()
 
 class TestAccountAsyncCheckAuth:
-    """Tests for Account async_check_auth."""
+    """Tests for migrating the legacy authentication cache."""
 
     @pytest.mark.usefixtures("enable_custom_integrations")
-    async def test_check_auth_save_stores_token(self, account) -> None:
-        """Test async_check_auth with save=True stores token to Store."""
-        with patch(
-            "custom_components.catlink.modules.account.Store"
-        ) as mock_store_cls:
-            mock_store = MagicMock()
-            mock_store.async_load = AsyncMock(return_value={})
-            mock_store.async_save = AsyncMock()
-            mock_store_cls.return_value = mock_store
+    async def test_check_auth_removes_legacy_cache(self, account, account_config) -> None:
+        account._config.pop(CONF_TOKEN)
+        with patch("custom_components.catlink.modules.account.Store") as store:
+            store.return_value.async_load = AsyncMock(return_value={CONF_TOKEN: "legacy-token"})
+            store.return_value.async_remove = AsyncMock()
 
-            result = await account.async_check_auth(save=True)
+            await account.async_check_auth()
 
-            assert result[CONF_PHONE] == "13812345678"
-            assert result[CONF_TOKEN] == "existing-token"
-            mock_store.async_save.assert_called_once()
-            saved = mock_store.async_save.call_args[0][0]
-            assert saved[CONF_TOKEN] == "existing-token"
+            store.return_value.async_remove.assert_awaited_once()
+            store.return_value.async_save.assert_not_called()
+            assert account.token == "legacy-token"
+            assert account_config[CONF_TOKEN] == "existing-token"
 
     @pytest.mark.usefixtures("enable_custom_integrations")
-    async def test_check_auth_load_restores_token_from_store(
-        self, account
-    ) -> None:
-        """Test async_check_auth loads token from Store when present."""
-        with patch(
-            "custom_components.catlink.modules.account.Store"
-        ) as mock_store_cls:
-            mock_store = MagicMock()
-            mock_store.async_load = AsyncMock(
-                return_value={CONF_PHONE: "13812345678", CONF_TOKEN: "stored-token"}
-            )
-            mock_store_cls.return_value = mock_store
-
-            with patch.object(
-                account, "async_login", new_callable=AsyncMock
-            ) as mock_login:
-                result = await account.async_check_auth(save=False)
-
-                assert account.token == "stored-token"
-                mock_login.assert_not_called()
-                assert result[CONF_TOKEN] == "stored-token"
-
-    @pytest.mark.usefixtures("enable_custom_integrations")
-    async def test_check_auth_calls_login_when_store_empty(
-        self, account
-    ) -> None:
-        """Test async_check_auth calls async_login when Store has no token."""
-        with patch(
-            "custom_components.catlink.modules.account.Store"
-        ) as mock_store_cls:
-            mock_store = MagicMock()
-            mock_store.async_load = AsyncMock(return_value={})
-            mock_store_cls.return_value = mock_store
-
-            with patch.object(
-                account, "async_login", new_callable=AsyncMock
-            ) as mock_login:
-                mock_login.return_value = True
-                await account.async_check_auth(save=False)
-
-                mock_login.assert_called_once()
+    async def test_check_auth_logs_in_without_cache(self, account) -> None:
+        account._config.pop(CONF_TOKEN)
+        account.async_login = AsyncMock(return_value=True)
+        with patch("custom_components.catlink.modules.account.Store") as store:
+            store.return_value.async_load = AsyncMock(return_value=None)
+            await account.async_check_auth()
+            store.return_value.async_remove.assert_not_called()
+        account.async_login.assert_awaited_once()
 
 
 class TestAccountRequestErrors:
@@ -483,7 +466,7 @@ class TestAccountRequestErrors:
     async def test_request_returns_empty_when_json_is_none(self, account) -> None:
         """Test request returns empty dict when response json is None."""
         async def mock_request_json_none(*args, **kwargs):
-            resp = MagicMock()
+            resp = MagicMock(status=200)
             resp.json = AsyncMock(return_value=None)
             return resp
 
@@ -492,3 +475,43 @@ class TestAccountRequestErrors:
         result = await account.request("token/device/list")
 
         assert result == {}
+
+    @pytest.mark.usefixtures("enable_custom_integrations")
+    async def test_gateway_error_skips_json_and_omits_query(self, account) -> None:
+        response = MagicMock(status=502, json=AsyncMock())
+        account.http.request = AsyncMock(return_value=response)
+
+        with pytest.raises(UpdateFailed, match=r"^GET /api/token/device/list: HTTP 502$"):
+            await account.request("token/device/list?token=secret-token")
+
+        response.release.assert_called_once()
+        response.json.assert_not_awaited()
+
+    @pytest.mark.usefixtures("enable_custom_integrations")
+    @pytest.mark.parametrize(
+        ("error", "message"),
+        [
+            (
+                ContentTypeError(
+                    MagicMock(real_url=URL("https://example.test/api?token=secret-token")),
+                    (),
+                    status=200,
+                    message="Unexpected content type",
+                ),
+                "HTTP 200 (ContentTypeError)",
+            ),
+            (JSONDecodeError("secret-token", "invalid JSON", 0), "JSONDecodeError"),
+        ],
+    )
+    async def test_response_errors_omit_secrets_from_traceback(
+        self, account, error, message
+    ) -> None:
+        response = MagicMock(status=200, json=AsyncMock(side_effect=error))
+        account.http.request = AsyncMock(return_value=response)
+
+        endpoint = "token/device/list?token=secret-token"
+        with pytest.raises(UpdateFailed) as raised:
+            await account.request(endpoint)
+
+        assert str(raised.value) == f"GET /api/token/device/list: {message}"
+        assert "secret-token" not in "".join(traceback.format_exception(raised.value))

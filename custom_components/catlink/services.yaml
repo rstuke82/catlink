@@ -6,7 +6,7 @@ request_api:
       domain: sensor
   fields:
     api:
-      description: API path
+      description: Relative CatLink API path
       example: /token/device/union/list/sorted
       required: true
       selector:
@@ -27,8 +27,8 @@ request_api:
             - POST
             - POST_GET
     throw:
-      description: Throw result
-      default: true
+      description: Show a notification with the API status code
+      default: false
       example: true
       selector:
         boolean:

@@ -1,4 +1,11 @@
 # Changelog
+## 2.1.4 - 2026-11-17
+
+- Keep authentication tokens out of logs when the CatLink API returns gateway errors or malformed responses.
+- Remove account phone numbers, raw device payloads, and signed parameters from integration logs.
+- Restrict API service requests to the configured HTTPS server and make status notifications opt-in.
+- Keep session tokens in memory and remove the legacy token cache on startup.
+
 ## 2.1.3 - 2026-11-16
 
 - Redacted credentials and account details from CatLink logs.

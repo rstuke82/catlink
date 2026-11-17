@@ -428,15 +428,12 @@ class C08Device(LitterDevice):
             )
             if not rdt and raw:
                 rdt = raw
-                _LOGGER.debug(
-                    "Using raw deviceInfo for %s because model parsing failed",
-                    self.name,
-                )
+                _LOGGER.debug("Using raw device data because model parsing failed")
         except (TypeError, ValueError) as exc:
             rdt = {}
-            _LOGGER.error("Got device detail for %s failed: %s", self.name, exc)
+            _LOGGER.error("Got device detail failed: %s", type(exc).__name__)
         if not rdt:
-            _LOGGER.warning("Got device detail for %s failed: %s", self.name, rsp)
+            _LOGGER.warning("CatLink device detail unavailable")
         self.detail = rdt
         self._action_error = None
         await self.async_refresh_c08_extras()
@@ -457,7 +454,7 @@ class C08Device(LitterDevice):
                 mod = k
                 break
         if mod is None:
-            _LOGGER.warning("Select mode failed for %s in %s", mode, self.modes)
+            _LOGGER.warning("Select mode failed")
             return False
         rdt = await self.account.request(
             API_LITTERBOX_CHANGE_MODE, {"workModel": mod, "deviceId": self.id}, "POST"
@@ -468,7 +465,7 @@ class C08Device(LitterDevice):
         """Select the device action."""
         action_payload = self._action_options().get(action)
         if action_payload is None:
-            _LOGGER.warning("Select action failed for %s", action)
+            _LOGGER.warning("Select action failed")
             return False
         rdt = await self.account.request(
             API_LITTERBOX_ACTION_COMMAND_V3,
@@ -492,7 +489,7 @@ class C08Device(LitterDevice):
                 type_code = k
                 break
         if type_code is None:
-            _LOGGER.warning("Select litter type failed for %s", litter_type)
+            _LOGGER.warning("Select litter type failed")
             return False
         rdt = await self.account.request(
             API_LITTERBOX_CAT_LITTER_SETTING,
@@ -509,7 +506,7 @@ class C08Device(LitterDevice):
                 safe_value = k
                 break
         if safe_value is None:
-            _LOGGER.warning("Select safe time failed for %s", safe_time)
+            _LOGGER.warning("Select safe time failed")
             return False
         rdt = await self.account.request(
             API_LITTERBOX_SAFE_TIME_SETTING,
@@ -659,7 +656,7 @@ class C08Device(LitterDevice):
             self._set_action_error(err_msg)
             return False
         await self.update_device_detail()
-        _LOGGER.info("%s: %s", action_name, rdt)
+        _LOGGER.debug("%s completed", action_name)
         return True
 
     def _action_options(self) -> dict[str, tuple[str, str]]:
@@ -680,7 +677,7 @@ class C08Device(LitterDevice):
             try:
                 return time.fromisoformat(start_raw), time.fromisoformat(end_raw)
             except ValueError:
-                _LOGGER.debug("Invalid quietTimes value: %s", quiet_times)
+                _LOGGER.debug("Invalid quietTimes value")
         return DEFAULT_QUIET_START, DEFAULT_QUIET_END
 
     @staticmethod
