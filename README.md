@@ -5,7 +5,7 @@
 <div align="center">
   <img src="https://play-lh.googleusercontent.com/eHPhN_fUDhdxMK4JAvlzjB5Mh-H72crLn2U3Khk37lzolNg2CTDgZXkB5bjPiM3CDqM" alt="CatLINK Logo" width="100">
   <span style="font-size: 50px; margin: 0 20px;">+</span>
-  <img src="https://raw.githubusercontent.com/OpenHomeFoundation/brand-assets/main/home-assistant/logo/screen/logomark/HA-logomark-color.png" alt="Home Assistant Logo" width="100">
+  <img src="https://media.githubusercontent.com/media/OpenHomeFoundation/brand-assets/main/home-assistant/logo/screen/logomark/HA-logomark-color.png" alt="Home Assistant Logo" width="100">
 </div>
 
 <div align="center">
