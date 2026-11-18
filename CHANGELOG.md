@@ -1,4 +1,10 @@
 # Changelog
+## 2.1.5 - 2026-11-17
+
+- Show @rstuke82 as the fork maintainer in Home Assistant.
+- Credit original author Alone (@al-one) and upstream contributors in the README.
+- Fix the Home Assistant logo and clarify where to submit issues and contributions.
+
 ## 2.1.4 - 2026-11-17
 
 - Keep authentication tokens out of logs when the CatLink API returns gateway errors or malformed responses.
